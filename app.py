@@ -78,6 +78,11 @@ def load_price_data(ticker: str, years: int) -> pd.DataFrame:
     end = datetime.today()
     start = end - pd.DateOffset(years=years)
     df = yf.download(ticker, start=start, end=end, auto_adjust=True, progress=False)
+    # Neuere yfinance-Versionen liefern auch bei einem einzelnen Ticker
+    # MultiIndex-Spalten (Feld, Ticker) zurück. Auf einfache Spaltennamen
+    # reduzieren, damit df["Close"] zuverlässig eine Series ist.
+    if isinstance(df.columns, pd.MultiIndex):
+        df.columns = df.columns.get_level_values(0)
     return df
 
 
@@ -158,7 +163,9 @@ def run_statistical_test(test_name, returns, group_keys, order, level):
     else:
         raise ValueError("Unbekannter Test")
 
-    return stat, p, note
+    # Auf reine Python-floats casten, damit Formatierung (z.B. in st.metric)
+    # unabhängig von scipy/numpy-Rückgabetypen zuverlässig funktioniert.
+    return float(stat), float(p), note
 
 
 # ----------------------------------------------------------------------------
